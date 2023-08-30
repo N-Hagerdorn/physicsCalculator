@@ -2,9 +2,141 @@
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-import math
+import math, sys
 import numpy as np
 from matplotlib import pyplot as plt
+import pygame
+from pygame.locals import *
+
+pygame.init()
+vec = pygame.math.Vector2  # 2 for two dimensional
+
+HEIGHT = 450
+WIDTH = 400
+ACC = 0.5
+FRIC = -0.12
+FPS = 60
+
+FramePerSec = pygame.time.Clock()
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Game")
+
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.surf = pygame.Surface((100, 100))
+        #self.surf.fill((128,255,40))
+        self.image = pygame.transform.scale(pygame.image.load('assets/duck.png'), (100,100))
+        self.rect = self.surf.get_rect(center = (10, 420))
+
+        self.pos = vec((10, 385))
+        self.vel = vec(0, 0)
+        self.acc = vec(0, 0)
+
+class platform(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.surf = pygame.Surface((WIDTH, 20))
+        self.surf.fill((255,0,0))
+        self.rect = self.surf.get_rect(center = (WIDTH/2, HEIGHT - 10))
+
+PT1 = platform()
+P1 = Player()
+
+all_sprites = pygame.sprite.Group()
+all_sprites.add(PT1)
+all_sprites.add(P1)
+
+
+color_active = pygame.Color('lightskyblue3')
+
+# color_passive store color(chartreuse4) which is
+# color of input box.
+color_passive = pygame.Color('white')
+
+#pygame.Rect((x, y), (width, height))
+class InputBox():
+
+    def __init__(self, pos, size):
+        self.rect = pygame.Rect(pos, size)
+        self.active = False
+        self.color = color_passive
+        self.text = ''
+
+inputBox1 = InputBox((200, 200), (140, 32))
+inputBox2 = InputBox((200, 300), (140, 32))
+inputBox3 = InputBox((200, 400), (140, 32))
+
+inputBoxes = [inputBox1, inputBox2, inputBox3]
+activeBox = None
+
+base_font = pygame.font.Font(None, 32)
+
+while True:
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            pygame.quit()
+            sys.exit()
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            for inputBox in inputBoxes:
+                if inputBox.rect.collidepoint(event.pos):
+                    activeBox = inputBox
+                    activeBox.color = color_active
+                else:
+                    activeBox.color = color_passive
+                    activeBox = None
+
+        if event.type == pygame.KEYDOWN:
+            if activeBox is None:
+                continue
+
+            # Check for backspace
+            if event.key == pygame.K_BACKSPACE:
+
+                # get text input from 0 to -1 i.e. end.
+                activeBox.text = activeBox.text[:-1]
+
+            elif event.key == pygame.K_RETURN:
+                # TODO: submit the entered number to the physics calculation
+                activeBox.color = color_passive
+                activeBox = None
+                continue
+
+            # Unicode standard is used for string
+            # formation
+            else:
+                character = event.unicode
+                if character.isnumeric() or character == '.':
+                    activeBox.text += event.unicode
+
+    screen.fill(pygame.Color('lightgray'))
+
+    for entity in all_sprites:
+        screen.blit(entity.surf, entity.rect)
+
+    screen.blit(P1.image, P1.rect)
+
+    for inputBox in inputBoxes:
+        pygame.draw.rect(screen, inputBox.color, inputBox.rect)
+        text_surface = base_font.render(inputBox.text, True, (0, 0, 0))
+
+    # render at position stated in arguments
+        screen.blit(text_surface, (inputBox.rect.x + 5, inputBox.rect.y + 5))
+
+    # set width of textfield so that text cannot get
+    # outside of user's text input
+        inputBox.rect.w = max(100, text_surface.get_width() + 10)
+
+    # display.flip() will update only a portion of the
+    # screen to updated, not full area
+    pygame.display.flip()
+
+    pygame.display.update()
+    FramePerSec.tick(FPS)
+
+
 
 def go():
     print("Initial velocity (m/s): ")
@@ -61,7 +193,7 @@ def f(t, x0, v0, a):
     return x0 + v0 * t + 1/2 * a * t * t
 
 # Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    go()
+#if __name__ == '__main__':
+    #go()
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
