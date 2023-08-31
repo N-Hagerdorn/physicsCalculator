@@ -48,8 +48,8 @@ class Player(pygame.sprite.Sprite):
         self.pos = vec((10, 385))
 
         # Set the movement of the Player
-        self.vel = vec(0, 0)
-        self.acc = vec(1, 0)
+        self.vel = vec(100, -50)
+        self.acc = vec(0, 0)
 
 class platform(pygame.sprite.Sprite):
     def __init__(self):
@@ -135,7 +135,7 @@ while True:
                 if character.isnumeric() or character == '.':
                     activeBox.text += event.unicode
 
-    screen.fill(pygame.Color('lightgray'))
+    screen.fill(pygame.Color('lightskyblue2'))
 
     # Draw all sprites onto the screen
     for entity in all_sprites:
@@ -166,12 +166,14 @@ while True:
 
     pygame.display.update()
 
+    # Increment the position and velocity of the Player according to the game tick
     P1.pos += P1.vel / FPS
     P1.vel += P1.acc / FPS
-    print(P1.pos)
-    print(P1.vel)
+    P1.acc[0] = -P1.vel[0] / 10
+    P1.acc[1] = 9.8
 
-    P1.rect = P1.surf.get_rect(center = P1.pos)
+    P1.rect.update(P1.surf.get_rect(center = P1.pos))
+
     # Wait until the next tick to continue running the simulation
     FramePerSec.tick(FPS)
 
