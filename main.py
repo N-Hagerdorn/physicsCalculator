@@ -20,13 +20,12 @@ FPS = 60
 FramePerSec = pygame.time.Clock()
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Game")
+pygame.display.set_caption("The Duck Thrower")
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.surf = pygame.Surface((100, 100))
-        #self.surf.fill((128,255,40))
         self.image = pygame.transform.scale(pygame.image.load('assets/duck.png'), (100,100))
         self.rect = self.surf.get_rect(center = (10, 420))
 
@@ -44,9 +43,15 @@ class platform(pygame.sprite.Sprite):
 PT1 = platform()
 P1 = Player()
 
+slingshot = pygame.sprite.Sprite()
+slingshot.surf = pygame.Surface((100, 100))
+slingshot.image = pygame.transform.scale(pygame.image.load('assets/slingshot.png'), (100,100))
+slingshot.rect = slingshot.surf.get_rect(center = (100, 420))
+
 all_sprites = pygame.sprite.Group()
 all_sprites.add(PT1)
 all_sprites.add(P1)
+all_sprites.add(slingshot)
 
 
 color_active = pygame.Color('lightskyblue3')
@@ -69,7 +74,7 @@ inputBox2 = InputBox((200, 300), (140, 32))
 inputBox3 = InputBox((200, 400), (140, 32))
 
 inputBoxes = [inputBox1, inputBox2, inputBox3]
-activeBox = None
+activeBoxIdx = -1
 
 base_font = pygame.font.Font(None, 32)
 
@@ -80,23 +85,22 @@ while True:
             sys.exit()
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            for inputBox in inputBoxes:
-                if inputBox.rect.collidepoint(event.pos):
-                    activeBox = inputBox
-                    activeBox.color = color_active
-                else:
-                    activeBox.color = color_passive
-                    activeBox = None
+            activeBoxIdx = -1
+            for i in range(len(inputBoxes)):
+                if inputBoxes[i].rect.collidepoint(event.pos):
+                    activeBoxIdx = i
+                    break
 
-        if event.type == pygame.KEYDOWN:
-            if activeBox is None:
-                continue
+
+
+        # Check if the event isa keyboard input and there is an active input box
+        if event.type == pygame.KEYDOWN and activeBoxIdx >= 0:
 
             # Check for backspace
             if event.key == pygame.K_BACKSPACE:
 
                 # get text input from 0 to -1 i.e. end.
-                activeBox.text = activeBox.text[:-1]
+                activeBox.text = inputBoxes[activeBoxIdx].text[:-1]
 
             elif event.key == pygame.K_RETURN:
                 # TODO: submit the entered number to the physics calculation
@@ -113,25 +117,26 @@ while True:
 
     screen.fill(pygame.Color('lightgray'))
 
+    # Draw all sprites onto the screen
     for entity in all_sprites:
-        screen.blit(entity.surf, entity.rect)
+        # If the sprite has an image texture, draw the image
+        if hasattr(entity, 'image'):
+            screen.blit(entity.image, entity.rect)
+        # Otherwise draw the sprite's surface
+        else:
+            screen.blit(entity.surf, entity.rect)
 
-    screen.blit(P1.image, P1.rect)
 
     for inputBox in inputBoxes:
         pygame.draw.rect(screen, inputBox.color, inputBox.rect)
         text_surface = base_font.render(inputBox.text, True, (0, 0, 0))
 
-    # render at position stated in arguments
+        # render at position stated in arguments
         screen.blit(text_surface, (inputBox.rect.x + 5, inputBox.rect.y + 5))
 
-    # set width of textfield so that text cannot get
-    # outside of user's text input
+        # set width of textfield so that text cannot get
+        # outside of user's text input
         inputBox.rect.w = max(100, text_surface.get_width() + 10)
-
-    # display.flip() will update only a portion of the
-    # screen to updated, not full area
-    pygame.display.flip()
 
     pygame.display.update()
     FramePerSec.tick(FPS)
