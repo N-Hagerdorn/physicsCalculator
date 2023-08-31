@@ -84,9 +84,11 @@ while True:
                 if inputBox.rect.collidepoint(event.pos):
                     activeBox = inputBox
                     activeBox.color = color_active
-                else:
+                    break
+                elif activeBox is not None:
                     activeBox.color = color_passive
                     activeBox = None
+
 
         if event.type == pygame.KEYDOWN:
             if activeBox is None:
