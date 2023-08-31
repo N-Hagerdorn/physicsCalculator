@@ -8,36 +8,54 @@ from matplotlib import pyplot as plt
 import pygame
 from pygame.locals import *
 
+# Initialize the pygame engine
 pygame.init()
 vec = pygame.math.Vector2  # 2 for two dimensional
 
+# Parameters for the app window
 HEIGHT = 450
 WIDTH = 400
-ACC = 0.5
-FRIC = -0.12
 FPS = 60
 
+# Physics parameters
+# Might not be needed, but leaving them here until further notice
+ACC = 0.5
+FRIC = -0.12
+
+# Not sure what this thingamabob does, but it sounds important
 FramePerSec = pygame.time.Clock()
 
+# Set the app window size and give it a fancy shmancy title
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("The Duck Thrower")
 
+# Player class
+# A Sprite that handles the responsibilities of the player entity on the screen
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
+
+        # Surfaces act like hitboxes, a non-graphics area that represents the space taken up by the sprite
         self.surf = pygame.Surface((100, 100))
+
+        # Load the sprite image file
         self.image = pygame.transform.scale(pygame.image.load('assets/duck.png'), (100,100))
+
+        # Set the coordinates of the
         self.rect = self.surf.get_rect(center = (10, 420))
 
+        # Set the coordinates of the Player on the app screen
         self.pos = vec((10, 385))
+
+        # Set the movement of the Player
         self.vel = vec(0, 0)
-        self.acc = vec(0, 0)
+        self.acc = vec(1, 0)
 
 class platform(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.surf = pygame.Surface((WIDTH, 20))
-        self.surf.fill((255,0,0))
+        self.surf.fill((0,150,0))
         self.rect = self.surf.get_rect(center = (WIDTH/2, HEIGHT - 10))
 
 PT1 = platform()
@@ -91,21 +109,23 @@ while True:
                     activeBoxIdx = i
                     break
 
-
-
         # Check if the event isa keyboard input and there is an active input box
         if event.type == pygame.KEYDOWN and activeBoxIdx >= 0:
+
+            activeBox = inputBoxes[activeBoxIdx]
 
             # Check for backspace
             if event.key == pygame.K_BACKSPACE:
 
                 # get text input from 0 to -1 i.e. end.
-                activeBox.text = inputBoxes[activeBoxIdx].text[:-1]
+                activeBox.text = activeBox.text[:-1]
 
-            elif event.key == pygame.K_RETURN:
+            elif event.key == pygame.K_RETURN or event.key == pygame.K_TAB:
                 # TODO: submit the entered number to the physics calculation
-                activeBox.color = color_passive
-                activeBox = None
+                activeBoxIdx += 1
+                if activeBoxIdx >= len(inputBoxes):
+                    activeBoxIdx = 0
+
                 continue
 
             # Unicode standard is used for string
@@ -127,7 +147,13 @@ while True:
             screen.blit(entity.surf, entity.rect)
 
 
-    for inputBox in inputBoxes:
+    for i in range(len(inputBoxes)):
+        inputBox = inputBoxes[i]
+        if i == activeBoxIdx:
+            inputBox.color = color_active
+        else:
+            inputBox.color = color_passive
+
         pygame.draw.rect(screen, inputBox.color, inputBox.rect)
         text_surface = base_font.render(inputBox.text, True, (0, 0, 0))
 
@@ -139,6 +165,14 @@ while True:
         inputBox.rect.w = max(100, text_surface.get_width() + 10)
 
     pygame.display.update()
+
+    P1.pos += P1.vel / FPS
+    P1.vel += P1.acc / FPS
+    print(P1.pos)
+    print(P1.vel)
+
+    P1.rect = P1.surf.get_rect(center = P1.pos)
+    # Wait until the next tick to continue running the simulation
     FramePerSec.tick(FPS)
 
 
