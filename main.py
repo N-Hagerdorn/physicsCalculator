@@ -8,13 +8,15 @@ from matplotlib import pyplot as plt
 import pygame
 from pygame.locals import *
 
+# README: Scale is 1m = 10px
+
 # Initialize the pygame engine
 pygame.init()
 vec = pygame.math.Vector2  # 2 for two dimensional
 
 # Parameters for the app window
-HEIGHT = 450
-WIDTH = 400
+HEIGHT = 480
+WIDTH = 640
 FPS = 60
 
 # Physics parameters
@@ -36,10 +38,10 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
 
         # Surfaces act like hitboxes, a non-graphics area that represents the space taken up by the sprite
-        self.surf = pygame.Surface((100, 100))
+        self.surf = pygame.Surface((50, 50))
 
         # Load the sprite image file
-        self.image = pygame.transform.scale(pygame.image.load('assets/duck.png'), (100,100))
+        self.image = pygame.transform.scale(pygame.image.load('assets/duck.png'), (50, 50))
 
         # Set the coordinates of the
         self.rect = self.surf.get_rect(center = (10, 420))
@@ -48,7 +50,7 @@ class Player(pygame.sprite.Sprite):
         self.pos = vec((10, 385))
 
         # Set the movement of the Player
-        self.vel = vec(100, -50)
+        self.vel = vec(0, 0)
         self.acc = vec(0, 0)
 
 class platform(pygame.sprite.Sprite):
@@ -96,6 +98,27 @@ activeBoxIdx = -1
 
 base_font = pygame.font.Font(None, 32)
 
+# Convert a polar vector to its equivalent Cartesian vector
+# Polar vector is (magnitude, angle) where angle is in degrees
+def polarToCartesian(polarVect):
+    magnitude = polarVect[0]
+    angle = polarVect[1]
+    x = magnitude * math.cos(angle * math.pi / 180)
+    y = -magnitude * math.sin(angle * math.pi / 180)
+
+    return vec(x, y)
+
+# Convert a Cartesian vector to its equivalent polar vector
+# Cartesian vector is (x, y)
+def cartesianToPolar(cartesianVect):
+    x = cartesianVect[0]
+    y = cartesianVect[1]
+    magnitude = math.sqrt(x * x + y * y)
+    angle = math.atan2(y, x)
+
+    return vec(magnitude, angle)
+
+
 while True:
     for event in pygame.event.get():
         if event.type == QUIT:
@@ -122,9 +145,23 @@ while True:
 
             elif event.key == pygame.K_RETURN or event.key == pygame.K_TAB:
                 # TODO: submit the entered number to the physics calculation
+                try:
+                    magnitude = float(inputBoxes[0].text)
+                    angle = float(inputBoxes[1].text)
+
+                    initialVelocity = polarToCartesian((magnitude, angle))
+                    P1.vel = initialVelocity
+
+                    P1.acc[1] = 98
+
+                except:
+                    continue
+
+
                 activeBoxIdx += 1
                 if activeBoxIdx >= len(inputBoxes):
                     activeBoxIdx = 0
+
 
                 continue
 
@@ -170,7 +207,6 @@ while True:
     P1.pos += P1.vel / FPS
     P1.vel += P1.acc / FPS
     P1.acc[0] = -P1.vel[0] / 10
-    P1.acc[1] = 9.8
 
     P1.rect.update(P1.surf.get_rect(center = P1.pos))
 
