@@ -8,11 +8,9 @@ from matplotlib import pyplot as plt
 import pygame
 from pygame.locals import *
 
-# README: Scale is 1m = 10px
-
 # Initialize the pygame engine
 pygame.init()
-vec = pygame.math.Vector2  # 2 for two dimensional
+vec = pygame.math.Vector2  # 2 for two-dimensional
 
 # Parameters for the app window
 HEIGHT = 480
@@ -20,14 +18,13 @@ WIDTH = 640
 FPS = 60
 
 # Physics parameters
-# Might not be needed, but leaving them here until further notice
-ACC = 0.5
-FRIC = -0.12
+world_offset_x = 0
+world_offset_y = 0
 
 # Not sure what this thingamabob does, but it sounds important
 FramePerSec = pygame.time.Clock()
 
-# Set the app window size and give it a fancy shmancy title
+# Set the app window size and give it a fancy-shmancy title
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("The Duck Thrower")
 
@@ -42,23 +39,28 @@ class Player(pygame.sprite.Sprite):
 
         # Load the sprite image file
         self.image = pygame.transform.scale(pygame.image.load('assets/duck.png'), (50, 50))
+        self.rect = self.surf.get_rect()
+        self.reset()
 
-        # Set the coordinates of the
-        self.rect = self.surf.get_rect(center = (10, 420))
-
+    def reset(self):
         # Set the coordinates of the Player on the app screen
-        self.pos = vec((10, 385))
+        self.pos = vec(self.surf.get_width() / 2, HEIGHT * 0.75 + self.surf.get_height() * 0.75)
 
         # Set the movement of the Player
         self.vel = vec(0, 0)
         self.acc = vec(0, 0)
 
+        self.rect.update(self.surf.get_rect(center=self.pos))
+
 class platform(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.surf = pygame.Surface((WIDTH, 20))
+
+        self.height = HEIGHT / 4
+        self.surf = pygame.Surface((WIDTH, self.height))
         self.surf.fill((0,150,0))
-        self.rect = self.surf.get_rect(center = (WIDTH/2, HEIGHT - 10))
+        self.pos = vec(WIDTH/2, HEIGHT - 10)
+        self.rect = self.surf.get_rect(center = self.pos)
 
 PT1 = platform()
 P1 = Player()
@@ -66,7 +68,8 @@ P1 = Player()
 slingshot = pygame.sprite.Sprite()
 slingshot.surf = pygame.Surface((100, 100))
 slingshot.image = pygame.transform.scale(pygame.image.load('assets/slingshot.png'), (100,100))
-slingshot.rect = slingshot.surf.get_rect(center = (100, 420))
+slingshot.pos = (100, HEIGHT * 0.8)
+slingshot.rect = slingshot.surf.get_rect(center = slingshot.pos)
 
 all_sprites = pygame.sprite.Group()
 all_sprites.add(PT1)
@@ -88,10 +91,13 @@ class InputBox():
         self.active = False
         self.color = color_passive
         self.text = ''
+        self.placeholder = 'test'
 
-inputBox1 = InputBox((200, 200), (140, 32))
-inputBox2 = InputBox((200, 300), (140, 32))
-inputBox3 = InputBox((200, 400), (140, 32))
+inputBox1 = InputBox((20, 20), (140, 30))
+inputBox1.placeholder = 'speed'
+inputBox2 = InputBox((20, 70), (140, 30))
+inputBox2.placeholder = 'angle'
+inputBox3 = InputBox((20, 120), (140, 30))
 
 inputBoxes = [inputBox1, inputBox2, inputBox3]
 activeBoxIdx = -1
@@ -118,8 +124,14 @@ def cartesianToPolar(cartesianVect):
 
     return vec(magnitude, angle)
 
+def distance(positionVector1, positionVector2):
+    distanceVector = positionVector2 - positionVector1
+    distance = cartesianToPolar(distanceVector)[0]
+
+    return distance
 
 while True:
+
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
@@ -143,8 +155,8 @@ while True:
                 # get text input from 0 to -1 i.e. end.
                 activeBox.text = activeBox.text[:-1]
 
+
             elif event.key == pygame.K_RETURN or event.key == pygame.K_TAB:
-                # TODO: submit the entered number to the physics calculation
                 try:
                     magnitude = float(inputBoxes[0].text)
                     angle = float(inputBoxes[1].text)
@@ -174,8 +186,30 @@ while True:
 
     screen.fill(pygame.Color('lightskyblue2'))
 
+    # Draw lines to represent the sling of the slingshot
+    if (P1.pos[0] < slingshot.pos[0]):
+        pygame.draw.line(screen, 'salmon4', P1.pos - vec(world_offset_x, world_offset_y), vec(slingshot.rect.center) - vec(0, slingshot.rect.height * 1/3), width=5)
+        pygame.draw.line(screen, 'salmon4', P1.pos - vec(world_offset_x, world_offset_y), vec(slingshot.rect.center) - vec(slingshot.rect.width * 1/3, slingshot.rect.height * 1/3), width=5)
+
+
+    if P1.pos[0] > WIDTH / 2:
+        world_offset_x = P1.pos[0] - WIDTH / 2
+    else:
+        world_offset_x = 0
+
+    if P1.pos[1] < HEIGHT * 0.75:
+        world_offset_y = P1.pos[1] - HEIGHT * 0.75
+    else:
+        world_offset_y = 0
+
+
+    PT1.surf = pygame.Surface((WIDTH + 2 * world_offset_x, HEIGHT / 4))
+    PT1.surf.fill((0, 150, 0))
+
     # Draw all sprites onto the screen
     for entity in all_sprites:
+        entity.rect.update(entity.surf.get_rect(center = entity.pos - vec(world_offset_x, world_offset_y)))
+
         # If the sprite has an image texture, draw the image
         if hasattr(entity, 'image'):
             screen.blit(entity.image, entity.rect)
@@ -192,7 +226,9 @@ while True:
             inputBox.color = color_passive
 
         pygame.draw.rect(screen, inputBox.color, inputBox.rect)
-        text_surface = base_font.render(inputBox.text, True, (0, 0, 0))
+        text_surface = base_font.render(inputBox.placeholder, True, (200, 200, 200))
+        if len(inputBox.text) > 0:
+            text_surface = base_font.render(inputBox.text, True, (0, 0, 0))
 
         # render at position stated in arguments
         screen.blit(text_surface, (inputBox.rect.x + 5, inputBox.rect.y + 5))
@@ -208,7 +244,8 @@ while True:
     P1.vel += P1.acc / FPS
     P1.acc[0] = -P1.vel[0] / 10
 
-    P1.rect.update(P1.surf.get_rect(center = P1.pos))
+    if (P1.pos[1] > HEIGHT * 0.75 + P1.surf.get_height() * 0.75):
+        P1.reset()
 
     # Wait until the next tick to continue running the simulation
     FramePerSec.tick(FPS)
@@ -254,17 +291,6 @@ def go():
     flight_time = rise_time + fall_time
 
     t = np.linspace(0, flight_time, 100)
-
-    '''
-    plt.plot(t, f(t, 0, velocity_initial_x, acceleration_x), color='red')
-    plt.show()
-
-    plt.plot(t, f(t, height_initial, velocity_initial_y, acceleration_y), color='green')
-    plt.show()
-    '''
-
-    plt.plot(f(t, 0, velocity_initial_x, acceleration_x), f(t, height_initial, velocity_initial_y, acceleration_y), color='green')
-    plt.show()
 
 def f(t, x0, v0, a):
     return x0 + v0 * t + 1/2 * a * t * t
