@@ -2,9 +2,8 @@
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-import math, sys, random
+import math, sys
 import numpy as np
-from matplotlib import pyplot as plt
 import pygame
 from pygame.locals import *
 
@@ -53,8 +52,6 @@ class Player(pygame.sprite.Sprite):
         self.acc = vec(0, GRAVITY)
 
         self.flying = True
-
-        self.spinRate = (random.random() - 0.5) * 45
 
     def move(self, fps):
 
@@ -112,8 +109,6 @@ class Player(pygame.sprite.Sprite):
         self.flying = False
 
         self.landingPoint = vec(self.pos)
-
-
 
 class platform(pygame.sprite.Sprite):
     def __init__(self):
@@ -241,6 +236,8 @@ while True:
                         P1.launch(initialVelocity)
 
                         P1.vel = initialVelocity
+                        virtualWidth = WIDTH
+                        virtualHeight = HEIGHT
 
                 except:
                     activeBoxIdx += 1
@@ -272,10 +269,11 @@ while True:
     virtualScreen.fill(pygame.Color('lightskyblue2'))
 
     # Draw all entities on the virtual screen
-    print(ground_height)
     PT1.surf = pygame.Surface((virtualWidth + 2 * world_offset_x, ground_thickness))
-    PT1.pos = (virtualWidth / 2, virtualHeight - ground_thickness / 2)
+    PT1.pos = (virtualWidth / 2, HEIGHT - ground_thickness / 2)
     PT1.surf.fill((0, 150, 0))
+    print("Ground is ", PT1.surf.get_rect().size)
+    print("Ground is at ", PT1.pos - vec(world_offset_x, world_offset_y))
 
     slingshotLeftArm = vec(slingshot.rect.center) - vec(slingshot.rect.width * 1 / 3, slingshot.rect.height * 1 / 3)
     slingshotRightArm = vec(slingshot.rect.center) - vec(0, slingshot.rect.height * 1 / 3)
@@ -310,16 +308,18 @@ while True:
         heightScale = topmostPoint[1] / HEIGHT
 
         scale = max(widthScale, heightScale)
-
-        virtualWidth = WIDTH * scale
-        virtualHeight = HEIGHT * scale
+        if scale < 1:
+            scale = 1
 
     if end:
-        print(virtualWidth, virtualHeight)
         world_offset_y = 0
         world_offset_x = 0
 
-        ground_height = virtualHeight - ground_thickness
+        if virtualWidth < WIDTH * scale:
+            virtualWidth += 1 + (WIDTH * scale - virtualWidth) / 50
+
+        if virtualHeight < HEIGHT * scale:
+            virtualHeight += 1 + (HEIGHT * scale - virtualHeight) / 50
 
         virtualScreen = pygame.transform.scale(virtualScreen, (WIDTH, HEIGHT))
 
