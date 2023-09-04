@@ -74,8 +74,8 @@ class Player(pygame.sprite.Sprite):
             if movingUp and movingDown:
                 self.path.append(currentPosition)         # Record the peak point of the trajectory
                 self.peakPoint = currentPosition
-            # Record the duck's position every second
-            elif self.tickCount % FPS == 0:
+            # Record the duck's position every other frame
+            elif self.tickCount % 6 == 0:
                 self.path.append(currentPosition)
 
             self.tickCount += 1
@@ -100,8 +100,6 @@ class Player(pygame.sprite.Sprite):
         self.flying = False
 
     def stop(self, end):
-        if not end:
-            print(self.path)
 
         self.vel = vec(0, 0)
         self.acc = vec(0, 0)
@@ -155,9 +153,8 @@ inputBox1 = InputBox((20, 20), (140, 30))
 inputBox1.placeholder = 'speed'
 inputBox2 = InputBox((20, 70), (140, 30))
 inputBox2.placeholder = 'angle'
-inputBox3 = InputBox((20, 120), (140, 30))
 
-inputBoxes = [inputBox1, inputBox2, inputBox3]
+inputBoxes = [inputBox1, inputBox2]
 activeBoxIdx = 0
 end = False
 
@@ -264,7 +261,6 @@ while True:
 
     # Draw the virtual screen
     virtualScreen = pygame.Surface((virtualWidth, virtualHeight))
-    print(virtualScreen.get_rect().size)
 
     virtualScreen.fill(pygame.Color('lightskyblue2'))
 
@@ -272,8 +268,6 @@ while True:
     PT1.surf = pygame.Surface((virtualWidth + 2 * world_offset_x, ground_thickness))
     PT1.pos = (virtualWidth / 2, HEIGHT - ground_thickness / 2)
     PT1.surf.fill((0, 150, 0))
-    print("Ground is ", PT1.surf.get_rect().size)
-    print("Ground is at ", PT1.pos - vec(world_offset_x, world_offset_y))
 
     slingshotLeftArm = vec(slingshot.rect.center) - vec(slingshot.rect.width * 1 / 3, slingshot.rect.height * 1 / 3)
     slingshotRightArm = vec(slingshot.rect.center) - vec(0, slingshot.rect.height * 1 / 3)
@@ -312,14 +306,21 @@ while True:
             scale = 1
 
     if end:
-        world_offset_y = 0
         world_offset_x = 0
+        world_offset_y = 0
 
         if virtualWidth < WIDTH * scale:
-            virtualWidth += 1 + (WIDTH * scale - virtualWidth) / 50
+            virtualWidth += virtualWidth / 100 + (WIDTH * scale - virtualWidth) / 20
 
         if virtualHeight < HEIGHT * scale:
-            virtualHeight += 1 + (HEIGHT * scale - virtualHeight) / 50
+            virtualHeight += virtualHeight / 100 + (HEIGHT * scale - virtualHeight) / 20
+
+        # Print a dashed line tracing the duck's flight path
+        for i in range(int(len(P1.path) / 2 - 0.5)):
+            pygame.draw.line(virtualScreen, 'black', P1.path[i * 2] + vec(0, virtualHeight - HEIGHT), P1.path[i * 2 + 1] + vec(0, virtualHeight - HEIGHT), int(3 * scale))
+        pygame.draw.circle(virtualScreen, 'blue', P1.path[0] + vec(0, virtualHeight - HEIGHT), 6 * scale)
+        pygame.draw.circle(virtualScreen, 'green', P1.peakPoint + vec(0, virtualHeight - HEIGHT), 6 * scale)
+        pygame.draw.circle(virtualScreen, 'red', P1.landingPoint + vec(0, virtualHeight - HEIGHT), 6 * scale)
 
         virtualScreen = pygame.transform.scale(virtualScreen, (WIDTH, HEIGHT))
 
