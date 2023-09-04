@@ -2,7 +2,7 @@
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-import math, sys
+import math, sys, random
 import numpy as np
 from matplotlib import pyplot as plt
 import pygame
@@ -20,6 +20,11 @@ FPS = 60
 # Physics parameters
 world_offset_x = 0
 world_offset_y = 0
+virtualWidth = WIDTH
+virtualHeight = HEIGHT
+GRAVITY = 98
+ground_thickness = HEIGHT * 1 / 8
+ground_height = virtualHeight - ground_thickness     # level of the top of the ground above the bottom of the game window
 
 # Not sure what this thingamabob does, but it sounds important
 FramePerSec = pygame.time.Clock()
@@ -27,6 +32,7 @@ FramePerSec = pygame.time.Clock()
 # Set the app window size and give it a fancy-shmancy title
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("The Duck Thrower")
+virtualScreen = pygame.Surface((virtualWidth, virtualHeight))
 
 # Player class
 # A Sprite that handles the responsibilities of the player entity on the screen
@@ -42,9 +48,45 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect()
         self.reset()
 
+    def launch(self, initialVelocity):
+        self.vel = initialVelocity
+        self.acc = vec(0, GRAVITY)
+
+        self.flying = True
+
+        self.spinRate = (random.random() - 0.5) * 45
+
+    def move(self, fps):
+
+        # Check if the duck was moving up prior to this tick
+        movingUp = self.vel[1] < 0
+
+        # Increment the position and velocity of the Player according to the game tick
+        P1.pos += P1.vel / fps
+        P1.vel += P1.acc / fps
+
+        # Check if the duck is no longer moving up after this tick
+        movingDown = self.vel[1] >= 0
+
+        currentPosition = vec(self.pos)
+
+        # When the duck is flying, track its trajectory
+        if self.flying:
+
+            # When the duck was moving up and is no longer moving up, we know this point must be the peak of the duck's trajectory
+            if movingUp and movingDown:
+                self.path.append(currentPosition)         # Record the peak point of the trajectory
+                self.peakPoint = currentPosition
+            # Record the duck's position every second
+            elif self.tickCount % FPS == 0:
+                self.path.append(currentPosition)
+
+            self.tickCount += 1
+
+
     def reset(self):
         # Set the coordinates of the Player on the app screen
-        self.pos = vec(self.surf.get_width() / 2, HEIGHT * 0.75 + self.surf.get_height() * 0.75)
+        self.pos = vec(self.surf.get_width() / 2, ground_height - self.surf.get_height() * 0.25)
 
         # Set the movement of the Player
         self.vel = vec(0, 0)
@@ -52,14 +94,35 @@ class Player(pygame.sprite.Sprite):
 
         self.rect.update(self.surf.get_rect(center=self.pos))
 
+        self.tickCount = 0
+        self.path = []
+
+        self.peakPoint = vec(self.pos)
+        self.landingPoint = vec(self.pos)
+
+        self.flying = False
+
+    def stop(self, end):
+        if not end:
+            print(self.path)
+
+        self.vel = vec(0, 0)
+        self.acc = vec(0, 0)
+
+        self.flying = False
+
+        self.landingPoint = vec(self.pos)
+
+
+
 class platform(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
 
-        self.height = HEIGHT / 4
-        self.surf = pygame.Surface((WIDTH, self.height))
+        self.height = ground_height
+        self.surf = pygame.Surface((virtualWidth, self.height))
         self.surf.fill((0,150,0))
-        self.pos = vec(WIDTH/2, HEIGHT - 10)
+        self.pos = vec(virtualWidth, virtualWidth - 10)
         self.rect = self.surf.get_rect(center = self.pos)
 
 PT1 = platform()
@@ -68,7 +131,7 @@ P1 = Player()
 slingshot = pygame.sprite.Sprite()
 slingshot.surf = pygame.Surface((100, 100))
 slingshot.image = pygame.transform.scale(pygame.image.load('assets/slingshot.png'), (100,100))
-slingshot.pos = (100, HEIGHT * 0.8)
+slingshot.pos = (WIDTH * 0.15, HEIGHT * 0.8)
 slingshot.rect = slingshot.surf.get_rect(center = slingshot.pos)
 
 all_sprites = pygame.sprite.Group()
@@ -100,7 +163,8 @@ inputBox2.placeholder = 'angle'
 inputBox3 = InputBox((20, 120), (140, 30))
 
 inputBoxes = [inputBox1, inputBox2, inputBox3]
-activeBoxIdx = -1
+activeBoxIdx = 0
+end = False
 
 base_font = pygame.font.Font(None, 32)
 
@@ -144,7 +208,7 @@ while True:
                     activeBoxIdx = i
                     break
 
-        # Check if the event isa keyboard input and there is an active input box
+        # Check if the event is a keyboard input and there is an active input box
         if event.type == pygame.KEYDOWN and activeBoxIdx >= 0:
 
             activeBox = inputBoxes[activeBoxIdx]
@@ -155,27 +219,33 @@ while True:
                 # get text input from 0 to -1 i.e. end.
                 activeBox.text = activeBox.text[:-1]
 
-
-            elif event.key == pygame.K_RETURN or event.key == pygame.K_TAB:
-                try:
-                    magnitude = float(inputBoxes[0].text)
-                    angle = float(inputBoxes[1].text)
-
-                    initialVelocity = polarToCartesian((magnitude, angle))
-                    P1.vel = initialVelocity
-
-                    P1.acc[1] = 98
-
-                except:
-                    continue
-
-
+            elif event.key == pygame.K_TAB:
                 activeBoxIdx += 1
                 if activeBoxIdx >= len(inputBoxes):
                     activeBoxIdx = 0
 
-
                 continue
+
+            elif event.key == pygame.K_RETURN:
+                if end:
+                    P1.reset()
+                    end = False
+                    continue
+
+                try:
+                    if P1.vel == (0, 0):
+                        magnitude = float(inputBoxes[0].text)
+                        angle = float(inputBoxes[1].text)
+
+                        initialVelocity = polarToCartesian((magnitude, angle))
+                        P1.launch(initialVelocity)
+
+                        P1.vel = initialVelocity
+
+                except:
+                    activeBoxIdx += 1
+                    if activeBoxIdx >= len(inputBoxes):
+                        activeBoxIdx = 0
 
             # Unicode standard is used for string
             # formation
@@ -184,27 +254,36 @@ while True:
                 if character.isnumeric() or character == '.':
                     activeBox.text += event.unicode
 
-    screen.fill(pygame.Color('lightskyblue2'))
+    if not end:
+        if P1.pos[0] > virtualWidth / 2:
+            world_offset_x = P1.pos[0] - virtualWidth / 2
+        else:
+            world_offset_x = 0
+
+        if P1.pos[1] < ground_height - ground_thickness:
+            world_offset_y = P1.pos[1] - ground_height + ground_thickness
+        else:
+            world_offset_y = 0
+
+    # Draw the virtual screen
+    virtualScreen = pygame.Surface((virtualWidth, virtualHeight))
+    print(virtualScreen.get_rect().size)
+
+    virtualScreen.fill(pygame.Color('lightskyblue2'))
+
+    # Draw all entities on the virtual screen
+    print(ground_height)
+    PT1.surf = pygame.Surface((virtualWidth + 2 * world_offset_x, ground_thickness))
+    PT1.pos = (virtualWidth / 2, virtualHeight - ground_thickness / 2)
+    PT1.surf.fill((0, 150, 0))
+
+    slingshotLeftArm = vec(slingshot.rect.center) - vec(slingshot.rect.width * 1 / 3, slingshot.rect.height * 1 / 3)
+    slingshotRightArm = vec(slingshot.rect.center) - vec(0, slingshot.rect.height * 1 / 3)
 
     # Draw lines to represent the sling of the slingshot
-    if (P1.pos[0] < slingshot.pos[0]):
-        pygame.draw.line(screen, 'salmon4', P1.pos - vec(world_offset_x, world_offset_y), vec(slingshot.rect.center) - vec(0, slingshot.rect.height * 1/3), width=5)
-        pygame.draw.line(screen, 'salmon4', P1.pos - vec(world_offset_x, world_offset_y), vec(slingshot.rect.center) - vec(slingshot.rect.width * 1/3, slingshot.rect.height * 1/3), width=5)
-
-
-    if P1.pos[0] > WIDTH / 2:
-        world_offset_x = P1.pos[0] - WIDTH / 2
-    else:
-        world_offset_x = 0
-
-    if P1.pos[1] < HEIGHT * 0.75:
-        world_offset_y = P1.pos[1] - HEIGHT * 0.75
-    else:
-        world_offset_y = 0
-
-
-    PT1.surf = pygame.Surface((WIDTH + 2 * world_offset_x, HEIGHT / 4))
-    PT1.surf.fill((0, 150, 0))
+    if (P1.pos[0] < slingshotRightArm[0] and P1.pos[1] > slingshotRightArm[1]):
+        pygame.draw.line(virtualScreen, 'salmon4', P1.pos - vec(world_offset_x, world_offset_y), slingshotRightArm, width=5)
+        pygame.draw.line(virtualScreen, 'salmon4', P1.pos - vec(world_offset_x, world_offset_y), slingshotLeftArm, width=5)
 
     # Draw all sprites onto the screen
     for entity in all_sprites:
@@ -212,11 +291,39 @@ while True:
 
         # If the sprite has an image texture, draw the image
         if hasattr(entity, 'image'):
-            screen.blit(entity.image, entity.rect)
+            virtualScreen.blit(entity.image, entity.rect)
         # Otherwise draw the sprite's surface
         else:
-            screen.blit(entity.surf, entity.rect)
+            virtualScreen.blit(entity.surf, entity.rect)
 
+
+
+    # If the player hits the ground, stop the simulation
+    if (P1.pos[1] > ground_height - P1.surf.get_height() * 0.25):
+        P1.stop(end)
+        end = True
+
+        rightmostPoint = P1.landingPoint
+        topmostPoint = P1.peakPoint
+
+        widthScale = (rightmostPoint[0] + P1.surf.get_width()) / WIDTH
+        heightScale = topmostPoint[1] / HEIGHT
+
+        scale = max(widthScale, heightScale)
+
+        virtualWidth = WIDTH * scale
+        virtualHeight = HEIGHT * scale
+
+    if end:
+        print(virtualWidth, virtualHeight)
+        world_offset_y = 0
+        world_offset_x = 0
+
+        ground_height = virtualHeight - ground_thickness
+
+        virtualScreen = pygame.transform.scale(virtualScreen, (WIDTH, HEIGHT))
+
+    screen.blit(virtualScreen, (0, 0))
 
     for i in range(len(inputBoxes)):
         inputBox = inputBoxes[i]
@@ -230,22 +337,24 @@ while True:
         if len(inputBox.text) > 0:
             text_surface = base_font.render(inputBox.text, True, (0, 0, 0))
 
+
+
+        world_offset_y = -(virtualHeight - HEIGHT)
+        world_offset_x = 0
+
         # render at position stated in arguments
         screen.blit(text_surface, (inputBox.rect.x + 5, inputBox.rect.y + 5))
 
         # set width of textfield so that text cannot get
+
         # outside of user's text input
         inputBox.rect.w = max(100, text_surface.get_width() + 10)
 
     pygame.display.update()
 
-    # Increment the position and velocity of the Player according to the game tick
-    P1.pos += P1.vel / FPS
-    P1.vel += P1.acc / FPS
-    P1.acc[0] = -P1.vel[0] / 10
 
-    if (P1.pos[1] > HEIGHT * 0.75 + P1.surf.get_height() * 0.75):
-        P1.reset()
+    # Move the player
+    P1.move(FPS)
 
     # Wait until the next tick to continue running the simulation
     FramePerSec.tick(FPS)
