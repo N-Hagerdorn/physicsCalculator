@@ -299,7 +299,7 @@ while True:
         topmostPoint = P1.peakPoint
 
         widthScale = (rightmostPoint[0] + P1.surf.get_width()) / WIDTH
-        heightScale = topmostPoint[1] / HEIGHT
+        heightScale = (HEIGHT - topmostPoint[1] + P1.surf.get_height()) / HEIGHT
 
         scale = max(widthScale, heightScale)
         if scale < 1:
@@ -316,8 +316,9 @@ while True:
             virtualHeight += virtualHeight / 100 + (HEIGHT * scale - virtualHeight) / 20
 
         # Print a dashed line tracing the duck's flight path
-        for i in range(int(len(P1.path) / 2 - 0.5)):
+        for i in range(int(len(P1.path) / 2)):
             pygame.draw.line(virtualScreen, 'black', P1.path[i * 2] + vec(0, virtualHeight - HEIGHT), P1.path[i * 2 + 1] + vec(0, virtualHeight - HEIGHT), int(3 * scale))
+
         pygame.draw.circle(virtualScreen, 'blue', P1.path[0] + vec(0, virtualHeight - HEIGHT), 6 * scale)
         pygame.draw.circle(virtualScreen, 'green', P1.peakPoint + vec(0, virtualHeight - HEIGHT), 6 * scale)
         pygame.draw.circle(virtualScreen, 'red', P1.landingPoint + vec(0, virtualHeight - HEIGHT), 6 * scale)
@@ -359,8 +360,6 @@ while True:
 
     # Wait until the next tick to continue running the simulation
     FramePerSec.tick(FPS)
-
-
 
 def go():
     print("Initial velocity (m/s): ")
