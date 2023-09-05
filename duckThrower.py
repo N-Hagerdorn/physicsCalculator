@@ -196,10 +196,13 @@ class DuckThrower:
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     self.active_box_idx = -1
-                    for i in range(len(self.input_boxes)):
-                        if self.input_boxes[i].rect.collidepoint(event.pos):
-                            self.active_box_idx = i
-                            break
+                    if self.duck.rect.collidepoint(event.pos):
+                        self.duck.swapImage()
+                    else:
+                        for i in range(len(self.input_boxes)):
+                            if self.input_boxes[i].rect.collidepoint(event.pos):
+                                self.active_box_idx = i
+                                break
 
                 # Check if the event is a keyboard input and there is an active input box
                 if event.type == pygame.KEYDOWN and self.active_box_idx >= 0:

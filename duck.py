@@ -1,4 +1,4 @@
-import pygame
+import pygame, random
 from pygame.math import Vector2 as vec
 
 """ Duck class
@@ -30,8 +30,14 @@ class Duck(pygame.sprite.Sprite):
         # Surfaces act like hit boxes, a rectangular area that represents the space taken up by the sprite
         self.surf = pygame.Surface((50, 50))
 
-        # Load the sprite image file
-        self.image = pygame.transform.scale(pygame.image.load('assets/duck.png'), (50, 50))
+        # Load the sprite image files
+        num_images = 8
+        self.images = [None] * num_images
+        for i in range(num_images):
+            self.images[i] = pygame.transform.scale(pygame.image.load('assets/duck' + str(i) + '.png'), (50, 50))
+
+        self.img_idx = random.randint(0, num_images - 1)
+        self.image = self.images[self.img_idx]
 
         # Get the rectangle that represents the area of the sprite
         self.rect = self.surf.get_rect()
@@ -133,3 +139,10 @@ class Duck(pygame.sprite.Sprite):
         self.flying = False
 
         self.landing_point = vec(self.pos)
+
+    def swapImage(self):
+        self.img_idx += random.randint(1, len(self.images) - 1)
+        if self.img_idx >= len(self.images):
+            self.img_idx %= len(self.images)
+        self.image = self.images[self.img_idx]
+
