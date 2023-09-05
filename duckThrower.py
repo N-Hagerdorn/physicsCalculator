@@ -194,11 +194,13 @@ class DuckThrower:
                     pygame.quit()
                     sys.exit()
 
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    self.active_box_idx = -1
+                if not self.running and event.type == pygame.MOUSEBUTTONDOWN:
                     if self.duck.rect.collidepoint(event.pos):
                         self.duck.swapImage()
+                        self.reset_sim()
+                        continue
                     else:
+                        self.active_box_idx = -1
                         for i in range(len(self.input_boxes)):
                             if self.input_boxes[i].rect.collidepoint(event.pos):
                                 self.active_box_idx = i
@@ -229,7 +231,6 @@ class DuckThrower:
                             # At this point, the function of the ENTER key is to reset the sim
                             self.reset_sim()
                             continue
-
                         try:
                             if not self.running:
                                 magnitude = float(self.input_boxes[0].text) * 100
@@ -252,9 +253,8 @@ class DuckThrower:
                     elif event.key == pygame.K_ESCAPE:
                         self.reset_sim()
 
-                    # Unicode standard is used for string
-                    # formation
-                    else:
+                    # Unicode standard is used for string formation
+                    elif event.unicode:
                         character = event.unicode
                         if character.isnumeric() or character == '.':
                             active_box.text += event.unicode

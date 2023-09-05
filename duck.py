@@ -145,4 +145,3 @@ class Duck(pygame.sprite.Sprite):
         if self.img_idx >= len(self.images):
             self.img_idx %= len(self.images)
         self.image = self.images[self.img_idx]
-
