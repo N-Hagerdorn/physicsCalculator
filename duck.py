@@ -7,9 +7,6 @@ Handles the graphical representation and physical simulation of the Duck.
 
 Inherits:
     pygame.sprite.Sprite
-
-Returns:
-    None
 """
 
 
@@ -31,9 +28,9 @@ class Duck(pygame.sprite.Sprite):
         self.surf = pygame.Surface((50, 50))
 
         # Load the sprite image files
-        num_images = 8
+        num_images = 9
         self.images = [None] * num_images
-        for i in range(num_images):
+        for i in range(len(self.images)):
             self.images[i] = pygame.transform.scale(pygame.image.load('assets/duck' + str(i) + '.png'), (50, 50))
 
         self.img_idx = random.randint(0, num_images - 1)
@@ -76,19 +73,23 @@ class Duck(pygame.sprite.Sprite):
         Returns:
             None
         """
+        if self.pos[1] > self.ground_height - self.surf.get_height() * 0.25:
+            self.stop()
 
         # Check if the Duck was moving up (negative y velocity) prior to this tick
         moving_up = self.vel[1] < 0
 
-        # Increment the position and velocity of the Duck according to the game tick
-        self.pos += self.vel / fps
-        self.vel += self.acc / fps
 
-        # Check if the Duck is no longer moving up (non-negative y velocity) after this tick
-        moving_down = self.vel[1] >= 0
 
-        # When the Duck is flying, track its trajectory
+        # When the Duck is flying, move it and track its trajectory
         if self.flying:
+
+            # Increment the position and velocity of the Duck according to the game tick
+            self.pos += self.vel / fps
+            self.vel += self.acc / fps
+
+            # Check if the Duck is no longer moving up (non-negative y velocity) after this tick
+            moving_down = self.vel[1] >= 0
 
             # When the Duck was moving up prior to this tick and is no longer moving up,
             # we know this point must be the peak of the Duck's trajectory
@@ -99,9 +100,6 @@ class Duck(pygame.sprite.Sprite):
             elif self.tick_count % int(fps / 10 + 0.5) == 0:
                 # Record the Duck's position every 10th of a second
                 self.path.append(vec(self.pos))
-
-            if (self.pos[1] > self.ground_height - self.surf.get_height() * 0.25):
-                self.stop()
 
             self.tick_count += 1
 
@@ -137,6 +135,8 @@ class Duck(pygame.sprite.Sprite):
         self.acc = vec(0, 0)
 
         self.flying = False
+
+        self.pos = vec(self.pos[0], self.ground_height - self.surf.get_height() * 0.25)
 
         self.landing_point = vec(self.pos)
 

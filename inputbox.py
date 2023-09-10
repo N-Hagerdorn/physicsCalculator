@@ -1,9 +1,7 @@
 import pygame
 
+# Colors indicate whether an input box is in focus or not
 color_active = pygame.Color('khaki2')
-
-# color_passive store color(chartreuse4) which is
-# color of input box.
 color_passive = pygame.Color('white')
 
 class InputBox:
@@ -18,4 +16,4 @@ class InputBox:
     def activate(self):
         self.color = color_active
     def deactivate(self):
-        self.color  = color_passive
+        self.color = color_passive

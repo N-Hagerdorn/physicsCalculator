@@ -38,9 +38,10 @@ class DuckThrower:
         # Flag to indicate if the simulation has ended
         self.running = False
 
-        # Set the app window size and give it a fancy-shmancy title
+        # Set the app window size and give it an appropriate title and icon
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("The Duck Thrower")
+        pygame.display.set_icon(pygame.image.load('assets/duck7.png'))
 
         # Create a virtual screen that scales to contain the entire simulation world
         self.virtual_screen = pygame.Surface((self.virtual_width, self.virtual_height))
@@ -54,7 +55,6 @@ class DuckThrower:
         self.ground.surf.fill((0, 150, 0))
         self.ground.pos = (self.virtual_width / 2, self.HEIGHT - self.ground_thickness / 2)
         self.ground.rect = self.ground.surf.get_rect(center = self.ground.pos)
-
 
         # Define the slingshot as a simple sprite
         self.slingshot = pygame.sprite.Sprite()
@@ -131,30 +131,25 @@ class DuckThrower:
 
         return dist
 
-
     def calcLaunch(self, initial_velocity, acceleration):
         """
         Calculates the peak and landing points of a simple ballistic trajectory given the initial launch velocity
         TODO: Finish this comment
 
         Args:
-            position_vector1 (vec2(float, float)): The 2D cartesian position vector of the first object
-            position_vector2 (vec2(float, float)): The 2D cartesian position vector of the second object
+            initial_velocity (vec2(float, float)): The 2D cartesian vector representing the velocity of the duck in cm/s
+            acceleration (vec2(float, float)): The 2D cartesian vector representing the acceleration of the duck in cm/s^2
 
         Returns:
-            float: The distance between the two position vectors
+            peak_point (vec2(float, float)): The peak point of the duck's trajectory relative to its initial point of launch
+            landing_point (vec2(float, float)): The landing point of the duck relative to its initial point of launch
         """
 
-        velocity_initial_x = initial_velocity[0] / 100
-        velocity_initial_y = initial_velocity[1] / 100
-
-        #print("Initial x velocity is:", velocity_initial_x)
-        #print("Initial y velocity is:", velocity_initial_y)
-
-        mass = 1 # Mass actually doesn't matter, because flight path is independent of mass
+        # Mass actually doesn't matter, because flight path is independent of mass, but we're putting it here to keep the KE equation correct
+        mass = 1
 
         # Find the maximum altitude of the object using kinetic energy to potential energy conversion
-        vertical_kinetic_energy = 1/2 * mass * velocity_initial_y * velocity_initial_y
+        vertical_kinetic_energy = 1/2 * mass * initial_velocity[1] * initial_velocity[1]
         maximum_potential_energy = -vertical_kinetic_energy
         altitude = maximum_potential_energy / (mass * acceleration[1])
 
@@ -165,17 +160,10 @@ class DuckThrower:
         drop = altitude
         fall_time = math.sqrt(abs(2 * drop / acceleration[1]))
 
-
         flight_time = rise_time + fall_time
 
-        #print("Flight time: ", flight_time)
-
-        distance = flight_time * velocity_initial_x
-
-        #print("Flight distance: ", distance)
-        #print("Peak altitude: ", altitude)
-
-        # TODO: Return the peak and landing points relative to the launch point
+        distance = flight_time * initial_velocity[0]
+        return [distance / 100, altitude / 100]
 
     def reset_sim(self):
         self.duck.reset()
@@ -185,6 +173,7 @@ class DuckThrower:
         self.virtual_height = self.HEIGHT * self.scale
         self.world_offset_x = 0
         self.world_offset_y = 0
+        self.flight_points = [0, 0]
 
     def sim(self):
         while True:
@@ -198,7 +187,6 @@ class DuckThrower:
                     if self.duck.rect.collidepoint(event.pos):
                         self.duck.swapImage()
                         self.reset_sim()
-                        continue
                     else:
                         self.active_box_idx = -1
                         for i in range(len(self.input_boxes)):
@@ -222,33 +210,25 @@ class DuckThrower:
                         if self.active_box_idx >= len(self.input_boxes):
                             self.active_box_idx = 0
 
-                        continue
-
                     elif event.key == pygame.K_RETURN:
 
                         # If the sim is running and the duck is not flying, the sim must have ended
                         if self.running and not self.duck.flying:
                             # At this point, the function of the ENTER key is to reset the sim
                             self.reset_sim()
-                            continue
-                        try:
-                            if not self.running:
-                                magnitude = float(self.input_boxes[0].text) * 100
-                                angle = float(self.input_boxes[1].text)
 
-                                initial_velocity = self.polarToCartesian((magnitude, angle))
-                                self.running = True
-                                self.duck.launch(initial_velocity, self.GRAVITY)
+                        elif not self.running:
+                            magnitude = float(self.input_boxes[0].text) * 100
+                            angle = float(self.input_boxes[1].text)
 
-                                self.calcLaunch(initial_velocity, self.GRAVITY)
+                            initial_velocity = self.polarToCartesian((magnitude, angle))
+                            self.running = True
+                            self.duck.launch(initial_velocity, self.GRAVITY)
 
-                                self.virtual_width = self.WIDTH
-                                self.virtual_height = self.HEIGHT
+                            self.flight_points = self.calcLaunch(initial_velocity, self.GRAVITY)
 
-                        except:
-                            self.active_box_idx += 1
-                            if self.active_box_idx >= len(self.input_boxes):
-                                self.active_box_idx = 0
+                            self.virtual_width = self.WIDTH
+                            self.virtual_height = self.HEIGHT
 
                     elif event.key == pygame.K_ESCAPE:
                         self.reset_sim()
@@ -258,6 +238,12 @@ class DuckThrower:
                         character = event.unicode
                         if character.isnumeric() or character == '.':
                             active_box.text += event.unicode
+                            if self.active_box_idx == 0:
+                                if float(active_box.text) > 30:
+                                    active_box.text = '30'
+                            elif self.active_box_idx == 1:
+                                if float(active_box.text) > 90:
+                                    active_box.text = '90'
 
             if not self.running:
                 self.world_offset_x = 0
@@ -283,13 +269,13 @@ class DuckThrower:
             self.ground.pos = (self.virtual_width / 2 + self.world_offset_x, self.HEIGHT + self.virtual_height / 2 - self.ground_thickness)
             self.ground.surf.fill((0, 150, 0))
 
-            slingshotLeftArm = vec(self.slingshot.rect.center) - vec(self.slingshot.rect.width * 1 / 3, self.slingshot.rect.height * 1 / 3)
-            slingshotRightArm = vec(self.slingshot.rect.center) - vec(0, self.slingshot.rect.height * 1 / 3)
+            slingshot_left_arm = vec(self.slingshot.rect.center) - vec(self.slingshot.rect.width * 1 / 3, self.slingshot.rect.height * 1 / 3)
+            slingshot_right_arm = vec(self.slingshot.rect.center) - vec(0, self.slingshot.rect.height * 1 / 3)
 
             # Draw lines to represent the sling of the slingshot
-            if (self.duck.pos[0] < slingshotRightArm[0] and self.duck.pos[1] > slingshotRightArm[1]):
-                pygame.draw.line(self.virtual_screen, 'salmon4', self.duck.pos - vec(self.world_offset_x, self.world_offset_y), slingshotRightArm, width=5)
-                pygame.draw.line(self.virtual_screen, 'salmon4', self.duck.pos - vec(self.world_offset_x, self.world_offset_y), slingshotLeftArm, width=5)
+            if self.duck.pos[0] < slingshot_right_arm[0] and self.duck.pos[1] > slingshot_right_arm[1]:
+                pygame.draw.line(self.virtual_screen, 'salmon4', self.duck.pos - vec(self.world_offset_x, self.world_offset_y), slingshot_right_arm, width=5)
+                pygame.draw.line(self.virtual_screen, 'salmon4', self.duck.pos - vec(self.world_offset_x, self.world_offset_y), slingshot_left_arm, width=5)
 
             # Draw all sprites onto the screen
             for entity in self.all_sprites:
@@ -332,12 +318,50 @@ class DuckThrower:
                     pygame.draw.line(self.virtual_screen, 'black', self.duck.path[i * 2] + vec(0, self.virtual_height - self.HEIGHT), self.duck.path[i * 2 + 1] + vec(0, self.virtual_height - self.HEIGHT), int(3 * self.scale))
                 if len(self.duck.path) > 0:
                     pygame.draw.circle(self.virtual_screen, 'blue', self.duck.path[0] + vec(0, self.virtual_height - self.HEIGHT), 6 * self.scale)
+                    text_surface1 = self.base_font.render(str(self.duck.path[0]), True, (200, 200, 200))
+
                     pygame.draw.circle(self.virtual_screen, 'green', self.duck.peak_point + vec(0, self.virtual_height - self.HEIGHT), 6 * self.scale)
                     pygame.draw.circle(self.virtual_screen, 'red', self.duck.landing_point + vec(0, self.virtual_height - self.HEIGHT), 6 * self.scale)
 
                 self.virtual_screen = pygame.transform.scale(self.virtual_screen, (self.WIDTH, self.HEIGHT))
 
             self.screen.blit(self.virtual_screen, (0, 0))
+
+            if self.running and not self.duck.flying and len(self.duck.path) > 0:
+                distance = self.flight_points[0]
+                altitude = self.flight_points[1]
+
+                # Calculate the start, end, and peak points of the flight
+                start_point = self.duck.path[0]
+                end_point = self.duck.path[0] + 100 * vec(distance / self.scale, 0)
+                peak_point = self.duck.path[0] + 100 * vec(distance / 2 / self.scale, altitude / self.scale)
+
+
+                start_label = self.base_font.render(str(vec(0, 0)), True, 'black')
+                end_label = self.base_font.render(str(vec(distance, 0)), True, 'black')
+                peak_label = self.base_font.render(str(vec(distance / 2, -altitude)), True, 'black')
+
+                # Offset the start point label to the right and below the start point
+                start_label_pos = start_point + vec(20, 20)
+
+                # Offset the end point label to the left and below the end point, making sure it does not clip out of the screen
+                end_label_pos_x = max(end_point[0] - end_label.get_width() - 50, 20)
+                end_label_pos_x = min(end_label_pos_x, self.WIDTH - end_label.get_width())
+                end_label_pos = vec(end_label_pos_x, end_point[1] + 20)
+
+                # Ensure the end point label does not overlap the start point label
+                if self.distance(end_label_pos, start_label_pos) < start_label.get_width() + 20:
+                    end_label_pos += vec(start_label.get_width() + 50, 0)
+
+                # Offset the peak point label below the peak point
+                peak_label_pos_x = max(peak_point[0] - peak_label.get_width() / 2, 20)
+                peak_label_pos_x = min(peak_label_pos_x, self.WIDTH - peak_label.get_width())
+                peak_label_pos = vec(peak_label_pos_x, peak_point[1] + 60)
+
+                # Draw the point labels on the screen
+                self.screen.blit(start_label, start_label_pos)
+                self.screen.blit(end_label, end_label_pos)
+                self.screen.blit(peak_label, peak_label_pos)
 
             if not self.running:
                 for i in range(len(self.input_boxes)):
