@@ -73,13 +73,14 @@ class Duck(pygame.sprite.Sprite):
         Returns:
             None
         """
+
+        # Stop the duck if it has passed below the ground level
+        # This is used because it is computationally simpler than checking for collisions
         if self.pos[1] > self.ground_height - self.surf.get_height() * 0.25:
             self.stop()
 
         # Check if the Duck was moving up (negative y velocity) prior to this tick
         moving_up = self.vel[1] < 0
-
-
 
         # When the Duck is flying, move it and track its trajectory
         if self.flying:
@@ -121,7 +122,10 @@ class Duck(pygame.sprite.Sprite):
         self.vel = vec(0, 0)
         self.acc = vec(0, 0)
 
+        # Stop counting ticks since the duck's flight is being restarted
         self.tick_count = 0
+
+        # Clear the set of points that the duck has flown through
         self.path = []
 
         self.peak_point = vec(self.pos)

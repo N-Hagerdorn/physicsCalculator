@@ -5,7 +5,7 @@ import sys
 # Pygame module
 import pygame
 from pygame.locals import *
-from pygame.math import Vector2 as vec
+from pygame.math import Vector2 as Vec
 
 # Custom modules
 from duck import Duck
@@ -40,7 +40,7 @@ class DuckThrower:
         self.ground_height = int(self.virtual_height - self.ground_thickness)   # Level of the top of the ground above the bottom of the app window
 
         # Physics constants
-        self.GRAVITY = vec(0, 980)
+        self.GRAVITY = Vec(0, 980)
 
         # Not sure what this thingamabob does, but it sounds important
         self.FramePerSec = pygame.time.Clock()
@@ -101,14 +101,14 @@ class DuckThrower:
             polar_vect (vec2(float, float)): A 2D vector or 2-element list in the form (magnitude, angle)
 
         Returns:
-            vec(float, float): A 2D vector in the form (x, y)
+            Vec(float, float): A 2D vector in the form (x, y)
         """
 
         x = polar_vect[0] * math.cos(polar_vect[1] * math.pi / 180)
         # y must be negative because pygame uses inverted y-axis coordinates
         y = -polar_vect[0] * math.sin(polar_vect[1] * math.pi / 180)
 
-        return vec(x, y)
+        return Vec(x, y)
 
     def cartesianToPolar(self, cartesian_vect):
         """
@@ -118,13 +118,13 @@ class DuckThrower:
             cartesian_vect (vec2(float, float)): A 2D vector or 2-element list in the form (x, y)
 
         Returns:
-            vec(float, float): A 2D vector in the form (magnitude, angle)
+            Vec(float, float): A 2D vector in the form (magnitude, angle)
         """
 
         magnitude = math.sqrt(cartesian_vect[0] * cartesian_vect[0] + cartesian_vect[1] * cartesian_vect[1])
         angle = math.atan2(cartesian_vect[1], cartesian_vect[0])
 
-        return vec(magnitude, angle)
+        return Vec(magnitude, angle)
 
     def distance(self, position_vector1, position_vector2):
         """
@@ -185,13 +185,22 @@ class DuckThrower:
             None
         """
 
+        # Reset the duck's physics parameters
         self.duck.reset()
+
+        # Stop the simulation
         self.running = False
+
+        # Set the screen scaling to restore the original camera zoom
         self.scale = 1
         self.virtual_width = self.WIDTH * self.scale
         self.virtual_height = self.HEIGHT * self.scale
+
+        # Reset the world offsets so the camera moves back to the slingshot
         self.world_offset_x = 0
         self.world_offset_y = 0
+
+        # Reset the calculated flight data so it is ready for the next run
         self.flight_points = [0, 0]
 
     def sim(self):
@@ -338,17 +347,17 @@ class DuckThrower:
             self.ground.surf.fill((0, 150, 0))
 
             # Find the left and right arms of the slingshot so a line can be drawn to represent the rubber band
-            slingshot_left_arm = vec(self.slingshot.rect.center) - vec(self.slingshot.rect.width * 1 / 3, self.slingshot.rect.height * 1 / 3)
-            slingshot_right_arm = vec(self.slingshot.rect.center) - vec(0, self.slingshot.rect.height * 1 / 3)
+            slingshot_left_arm = Vec(self.slingshot.rect.center) - Vec(self.slingshot.rect.width * 1 / 3, self.slingshot.rect.height * 1 / 3)
+            slingshot_right_arm = Vec(self.slingshot.rect.center) - Vec(0, self.slingshot.rect.height * 1 / 3)
 
             # Draw lines to represent the rubber band of the slingshot
             if self.duck.pos[0] < slingshot_right_arm[0] and self.duck.pos[1] > slingshot_right_arm[1]:
-                pygame.draw.line(self.virtual_screen, 'salmon4', self.duck.pos - vec(self.world_offset_x, self.world_offset_y), slingshot_right_arm, width=5)
-                pygame.draw.line(self.virtual_screen, 'salmon4', self.duck.pos - vec(self.world_offset_x, self.world_offset_y), slingshot_left_arm, width=5)
+                pygame.draw.line(self.virtual_screen, 'salmon4', self.duck.pos - Vec(self.world_offset_x, self.world_offset_y), slingshot_right_arm, width=5)
+                pygame.draw.line(self.virtual_screen, 'salmon4', self.duck.pos - Vec(self.world_offset_x, self.world_offset_y), slingshot_left_arm, width=5)
 
             # Draw all sprites onto the screen using the world offsets for correct positioning
             for entity in self.all_sprites:
-                entity.rect.update(entity.surf.get_rect(center=entity.pos - vec(self.world_offset_x, self.world_offset_y)))
+                entity.rect.update(entity.surf.get_rect(center=entity.pos - Vec(self.world_offset_x, self.world_offset_y)))
 
                 # If the sprite has an image texture, draw the image
                 if hasattr(entity, 'image'):
@@ -398,14 +407,14 @@ class DuckThrower:
                 for i in range(int(len(self.duck.path) / 2)):
                     # Print a line from every even-indexed point in the trajectory to the next point,
                     # which creates a dashed line along the flight path
-                    pygame.draw.line(self.virtual_screen, 'black', self.duck.path[i * 2] + vec(0, self.virtual_height - self.HEIGHT), self.duck.path[i * 2 + 1] + vec(0, self.virtual_height - self.HEIGHT), int(3 * self.scale))
+                    pygame.draw.line(self.virtual_screen, 'black', self.duck.path[i * 2] + Vec(0, self.virtual_height - self.HEIGHT), self.duck.path[i * 2 + 1] + Vec(0, self.virtual_height - self.HEIGHT), int(3 * self.scale))
 
                 if len(self.duck.path) > 0:
 
                     # Draw a blue circle at the starting point, green circle at the peak, and red circle at the end point
-                    pygame.draw.circle(self.virtual_screen, 'blue', self.duck.path[0] + vec(0, self.virtual_height - self.HEIGHT), 6 * self.scale)
-                    pygame.draw.circle(self.virtual_screen, 'green', self.duck.peak_point + vec(0, self.virtual_height - self.HEIGHT), 6 * self.scale)
-                    pygame.draw.circle(self.virtual_screen, 'red', self.duck.landing_point + vec(0, self.virtual_height - self.HEIGHT), 6 * self.scale)
+                    pygame.draw.circle(self.virtual_screen, 'blue', self.duck.path[0] + Vec(0, self.virtual_height - self.HEIGHT), 6 * self.scale)
+                    pygame.draw.circle(self.virtual_screen, 'green', self.duck.peak_point + Vec(0, self.virtual_height - self.HEIGHT), 6 * self.scale)
+                    pygame.draw.circle(self.virtual_screen, 'red', self.duck.landing_point + Vec(0, self.virtual_height - self.HEIGHT), 6 * self.scale)
 
                 # Scale the virtual screen down to fit within the actual screen
                 self.virtual_screen = pygame.transform.scale(self.virtual_screen, (self.WIDTH, self.HEIGHT))
@@ -422,33 +431,33 @@ class DuckThrower:
 
                 # Calculate the locations of the start, end, and peak points of the flight on the screen
                 start_point = self.duck.path[0]
-                end_point = self.duck.path[0] + 100 * vec(distance / self.scale, 0)
-                peak_point = self.duck.path[0] + 100 * vec(distance / 2 / self.scale, altitude / self.scale)
+                end_point = self.duck.path[0] + 100 * Vec(distance / self.scale, 0)
+                peak_point = self.duck.path[0] + 100 * Vec(distance / 2 / self.scale, altitude / self.scale)
 
                 # Make text labels for each of the points
-                start_label = self.base_font.render(str(vec(0, 0)), True, 'black')
-                end_label = self.base_font.render(str(vec(distance, 0)), True, 'black')
-                peak_label = self.base_font.render(str(vec(distance / 2, -altitude)), True, 'black')
+                start_label = self.base_font.render(str(Vec(0, 0)), True, 'black')
+                end_label = self.base_font.render(str(Vec(distance, 0)), True, 'black')
+                peak_label = self.base_font.render(str(Vec(distance / 2, -altitude)), True, 'black')
 
                 # Offset the start point label to the right and below the start point
-                start_label_pos = start_point + vec(20, 20)
+                start_label_pos = start_point + Vec(20, 20)
 
                 # Offset the end point label to the left and below the end point,
                 # making sure it does not clip out of the screen
                 end_label_pos_x = max(end_point[0] - end_label.get_width() - 50, 20)
                 end_label_pos_x = min(end_label_pos_x, self.WIDTH - end_label.get_width())
-                end_label_pos = vec(end_label_pos_x, end_point[1] + 20)
+                end_label_pos = Vec(end_label_pos_x, end_point[1] + 20)
 
                 # Ensure the end point label does not overlap the start point label
                 if self.distance(end_label_pos, start_label_pos) < start_label.get_width() + 20:
-                    end_label_pos += vec(start_label.get_width() + 50, 0)
+                    end_label_pos += Vec(start_label.get_width() + 50, 0)
 
                 # Offset the peak point label below the peak point,
                 # Making sure it does not clip out of the screen
                 peak_label_pos_x = max(peak_point[0] - peak_label.get_width() / 2, 20)
                 peak_label_pos_x = min(peak_label_pos_x, self.WIDTH - peak_label.get_width())
                 peak_label_pos_y = max(peak_point[1] + 60, 20)
-                peak_label_pos = vec(peak_label_pos_x, peak_label_pos_y)
+                peak_label_pos = Vec(peak_label_pos_x, peak_label_pos_y)
 
                 # Draw the point labels on the screen
                 self.screen.blit(start_label, start_label_pos)
