@@ -167,7 +167,7 @@ class DuckThrower:
         # Use kinematics equations to find the flight time to the peak of the flight
         rise_time = math.sqrt(abs(2 * altitude / acceleration[1]))
 
-        # Use mechanics to find the flight time from the peak of the flight to landing
+        # Use kinematics to find the flight time from the peak of the flight to landing
         drop = altitude
         fall_time = math.sqrt(abs(2 * drop / acceleration[1]))
 

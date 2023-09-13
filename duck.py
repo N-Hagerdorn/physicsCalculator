@@ -16,9 +16,6 @@ class Duck(pygame.sprite.Sprite):
         """
         Initializes the Duck sprite with its included graphics and physics parameters.
 
-        Args:
-            None
-
         Returns:
             None
         """
@@ -108,9 +105,6 @@ class Duck(pygame.sprite.Sprite):
         """
         Reset the Duck's position and movement. Used to reset the simulation between runs as well as initializing the duck.
 
-        Args:
-            None
-
         Returns:
             None
         """
@@ -134,18 +128,39 @@ class Duck(pygame.sprite.Sprite):
         self.flying = False
 
     def stop(self):
+        """
+        Stops the movement of the duck.
 
+        Returns:
+            None
+        """
+
+        # Set the movement parameters of the duck to 0 to stop all movement
         self.vel = vec(0, 0)
         self.acc = vec(0, 0)
 
+        # Update the state of the duck
         self.flying = False
 
+        # Set the duck's y position to ground height
         self.pos = vec(self.pos[0], self.ground_height - self.surf.get_height() * 0.25)
 
+        # Record the duck's landing position
         self.landing_point = vec(self.pos)
 
     def swapImage(self):
+        """
+        Swaps the duck's sprite image.
+
+        Returns:
+            None
+        """
+
+        # Increment the index in the list of images to use for the duck's sprite by a random amount
         self.img_idx += random.randint(1, len(self.images) - 1)
-        if self.img_idx >= len(self.images):
-            self.img_idx %= len(self.images)
+
+        # Use mod to wrap the image index in the common case that it overflows past the bounds of the list
+        self.img_idx %= len(self.images)
+
+        # Change the image of the duck to the image at the new index of the list
         self.image = self.images[self.img_idx]
